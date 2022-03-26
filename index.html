@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="hr">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"  >
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <title> Tetris </title>
+    <link rel="shortcut icon" type="image/png" href="Tetris_logo.png"/>
+    <script src="script.js"></script>
+  </head>
+
+  <body>
+    <header class="mainTitle">
+      <h1>TETRIS</h1>
+    </header>
+
+    <main class="row">
+      <aside class="col-1">
+        <ol>
+          <li>
+            <section>
+              <h2>
+                Controls
+              </h2>
+              <ul>
+                <li>
+                  Left shift: &#8592;
+                </li>
+                <li>
+                  Right shift: &#8594;
+                </li>
+                <li>
+                  Soft drop:&#8595;
+                </li>
+                <li>
+                  Hard drop: space
+                </li>
+                <li>
+                  Rotate:	&#8593;
+                </li>
+              </ul>
+            </section>
+          </li>
+        </ol>
+      </aside>
+
+      <div class="main col-2">
+        <div id="grid">
+    
+        </div>
+      </div>
+
+      <aside class="col-3">
+        <ol>
+          <li>
+            <section>
+              <p id="score">Score: </p>
+              <p id="lines">Lines: </p>
+            </section>
+          </li>
+          <li>
+            <button id="restart" onclick="restart();">
+              Restart
+            </button>
+
+          </li>
+          <li>
+            <button id="toggleMusic" onclick="toggleMusic();">
+              Stop music
+            </button>
+          </li>
+        </ol>
+      </aside>
+
+      <h1 id="game_over">
+        GAME OVER
+      </h1>
+    </main>
+
+    <footer>
+      <p>Made possible by: Rangoiv</p>
+    </footer>
+  </body>
+</html>
