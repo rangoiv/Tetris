@@ -134,14 +134,17 @@ ol {
 
 /* =====================  GRID =====================*/
 
-#grid {
+#mainGrid {
+    grid-template-columns: repeat(10, 1fr);
+}
+
+[id*="Grid"] {
     width: fit-content;
     display: grid;
     gap: 3px;
     padding: 3px;
     background-color: rgb(10, 20, 65);
-    grid-template-columns: repeat(10, 1fr);
-    
+    grid-template-columns: repeat(4, 1fr);
 }
 
 [class*="cell"] {

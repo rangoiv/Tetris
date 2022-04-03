@@ -2,9 +2,14 @@
   GUIDELINES NOT FOLLOWED:
   https://tetris.fandom.com/wiki/Tetris_Guideline
 
+  Key codes:
+  https://keycode.info/for/alt
+
   Tetris game
   by Rangoiv
 */
+
+// ========================= CLASSES ============================
 
 class Cell{
     constructor(name) { this.name = name; }
@@ -20,11 +25,31 @@ class Tetrimino {
 class FallingTetronimo {
     constructor() {
         this.bag = [];
+        this.holdTetronimo;
+        this.isHolding = false;
     }
 
     grid(i,j) {
         if (this.tetronimo.rotation[this.rot][i*4+j] == '1') {
             return new Cell(this.tetronimo.name);
+        }
+        return null;
+    }
+
+    nextGrid(k,i,j) {
+        k = this.bag.length-k-1;
+        if (this.bag[k]) {
+            if (this.bag[k].rotation[0][i*4+j] == '1') {
+                return new Cell(this.bag[k].name);
+            }
+        }
+        return null;
+    }
+    holdGrid(i,j) {
+        if (this.holdTetronimo) {
+            if (this.holdTetronimo.rotation[0][i*4+j] == '1') {
+                return new Cell(this.holdTetronimo.name);
+            }
         }
         return null;
     }
@@ -50,16 +75,33 @@ class FallingTetronimo {
     moveUp() {
         this.y -= 1;
     }
-    setNewTetronimo() {
+    setNewTetronimo(fromHold = false) {
+        if (fromHold == false) {
+            this.isHolding = false;
+        }
+
+        // Set the new bag if needed
         // Using 7-bag Random Generator for new tetrominoes
-        if (this.bag.length > 0) {
-            this.tetronimo = this.bag.pop();
-        } else {
-            this.bag = []
+        if (this.bag.length < 7) {
+            var newBag = [];
             for (let i = 0; i < TETRONIMOS.length; i++) {
-                this.bag[i] = Object.assign({}, TETRONIMOS[i]);
+                newBag[i] = Object.assign({}, TETRONIMOS[i]);
             }
-            shuffleArray(this.bag);
+            shuffleArray(newBag);
+            this.bag = [...newBag, ...this.bag];
+        }
+
+        // Set the new piece
+        if (fromHold) {
+            if (this.holdTetronimo) {
+                var newTetronimo = this.tetronimo;
+                this.tetronimo = this.holdTetronimo;
+                this.holdTetronimo = newTetronimo;
+            } else {
+                this.holdTetronimo = this.tetronimo;
+                this.tetronimo = this.bag.pop();
+            }
+        } else {
             this.tetronimo = this.bag.pop();
         }
         
@@ -67,9 +109,16 @@ class FallingTetronimo {
         this.y = -3;
         this.rot = 0;
     }
+    holdPiece() {
+        if (this.isHolding) {
+            return;
+        }
+        this.isHolding = true;
+        this.setNewTetronimo(true);
+    }
 }
 
-/* CONSTANTS */
+// ========================= CONSTANTS ============================
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -87,16 +136,24 @@ const TETRONIMOS = [Tetrimino_L, Tetrimino_J, Tetrimino_O, Tetrimino_I, Tetrimin
 const ROW_SCORE = 10;
 const TETRIS_SCORE = 100;
 const PIECE_SCORE = 1;
+const NEXT_PIECES = 3;
 
-/* VARIABLES */
+// ========================= VARIABLES ============================
 
 var mainGrid = [];
 var tickInterval;
-var documentGrid=[];
+var docMainGrid=[];
+
+var docNextGrid=[];
+var docHoldGrid=[];
+
 var score = 0;
 var lines = 0;
 var pieces = 0;
 var fallingTetronimo = new FallingTetronimo();
+
+var isPaused;
+var isGameOver;
 
 var audioPlayer = new Audio('Korobienki.mp3');
 
@@ -106,27 +163,63 @@ var yDown = null;
 var scoreText;
 var linesText;
 
-var music = false;
+var isMusicPlaying = false;
 
 window.onload = load;
 
+// ========================= GAME SCRIPT ============================
+
 function load() {
-    documentGridElement = document.getElementById("grid");
+    documentGridElement = document.getElementById("mainGrid");
     scoreText = document.getElementById("score");
     linesText = document.getElementById("lines");
 
-    // Create new cells in html document
+    nextGridElements = []
+    holdGridElement = document.getElementById("holdGrid");
+
+    // Create new cells in html document for all next grids
+    for (let k=0; k<NEXT_PIECES; k++) {
+        nextGridElements[k] = document.getElementById("nextGrid_"+(k+1));
+        docNextGrid[k] = [];
+
+        for (let i = 0; i < 4; i++) {
+            nextGridElements[k][i]=[];
+            docNextGrid[k][i]=[];
+            for (let j = 0; j < 4; j++) {
+                var cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.id = 'n:'+k+':'+i+':'+j;
+                nextGridElements[k].appendChild(cell);
+                docNextGrid[k][i][j] = document.getElementById('n:'+k+':'+i+':'+j);
+            }
+        }
+    }
+
+    // Create new cells in html document for main grid
     for (let i = 0; i < HEIGHT; i++) {
-        documentGrid[i]=[];
+        docMainGrid[i]=[];
         for (let j = 0; j < WIDTH; j++) {
             var cell = document.createElement('div');
             cell.classList.add('cell');
             cell.id = ''+i+':'+j;
             documentGridElement.appendChild(cell);
-            documentGrid[i][j] = document.getElementById(''+i+':'+j);
+            docMainGrid[i][j] = document.getElementById(''+i+':'+j);
         }
     }
 
+    // Create new cells in html document
+    for (let i = 0; i < 4; i++) {
+        docHoldGrid[i]=[];
+        for (let j = 0; j < 4; j++) {
+            var cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.id = 'h:'+i+':'+j;
+            holdGridElement.appendChild(cell);
+            docHoldGrid[i][j] = document.getElementById('h:'+i+':'+j);
+        }
+    }
+
+    // Uncomment this line to disable music at the start
     document.addEventListener("click", playMusic);
     begin();
 }
@@ -150,17 +243,20 @@ function begin() {
         }
     }
     
+    fallingTetronimo = new FallingTetronimo();
     fallingTetronimo.setNewTetronimo();
 
     document.getElementById("game_over").style.visibility = "hidden";
 
     document.addEventListener("keydown", keyPush);
-    document.addEventListener('touchstart', handleTouchStart, false);        
-    document.addEventListener('touchend', handleTouchMove, false);
-    document.addEventListener('touch', handleTouch, false);
-    
+
+    isGameOver = false;
+    isPaused = false;
     tick()
 }
+
+
+// ========================= MUSIC SCRIPT ============================
 
 function playMusic() {
     if (typeof audioPlayer.loop == 'boolean')
@@ -184,18 +280,20 @@ function toggleMusic() {
     toggleMusicButton = document.getElementById("toggleMusic");
     toggleMusicButton.blur();
 
-    if (music) {
+    if (isMusicPlaying) {
         // is playing
-        music = false;
+        isMusicPlaying = false;
         audioPlayer.pause();
         toggleMusicButton.innerHTML = "Play music"
     } else {
         // isn't playing
-        music = true;
+        isMusicPlaying = true;
         audioPlayer.play();
         toggleMusicButton.innerHTML = "Stop music"
     }
 }
+
+// ========================= GAME LOOP ============================
 
 function tick() {
 
@@ -220,6 +318,8 @@ function tick() {
                     }
                     mainGrid[y][x] = cell;
                 }
+
+                cell = fallingTetronimo.grid(i,j)
             }
         }
         
@@ -258,7 +358,7 @@ function tick() {
     }
     
     clearTimeout(tickInterval);
-    tickInterval = setTimeout(tick,  Math.max(700-pieces*10, 100));
+    tickInterval = setTimeout(tick,  Math.max(700-pieces*7, 100));
     draw();
     return isTouchdown;
 }
@@ -266,17 +366,19 @@ function tick() {
 function gameOver() {
     document.getElementById("game_over").style.visibility = "visible";
     clearInterval(tickInterval);
-    document.removeEventListener("keydown", keyPush);
+    isGameOver = true;
 }
+
+// ========================= DRAWING ============================
 
 function draw() {
     // Set class names of cells on main grid
     for (let i = 0; i < HEIGHT; i++) {
         for (let j = 0; j < WIDTH; j++) {
             if (mainGrid[i][j]) {
-                documentGrid[i][j].className = 'cell cell_' + mainGrid[i][j].name;
+                docMainGrid[i][j].className = 'cell cell_' + mainGrid[i][j].name;
             } else {
-                documentGrid[i][j].className = 'cell';
+                docMainGrid[i][j].className = 'cell';
             }
         }
     }
@@ -287,7 +389,28 @@ function draw() {
                 y = fallingTetronimo.y+i;
                 x = fallingTetronimo.x+j;
                 if (0 <= x && x < WIDTH && 0 <= y && y < HEIGHT) {
-                    documentGrid[y][x].className = 'falling_cell cell_' + fallingTetronimo.grid(i,j).name;
+                    docMainGrid[y][x].className = 'falling_cell cell_' + fallingTetronimo.grid(i,j).name;
+                }
+            }
+        }
+    }
+    // Set class names of cells on hold piece and next pieces
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            // Draw hold piece
+            cell = fallingTetronimo.holdGrid(i,j);
+            if (cell) {
+                docHoldGrid[i][j].className = 'cell_' + cell.name;
+            } else {
+                docHoldGrid[i][j].className = 'cell';
+            }
+            // Draw next pieces
+            for (let k = 0; k < NEXT_PIECES; k++) {
+                cell = fallingTetronimo.nextGrid(k,i,j);
+                if (cell) {
+                    docNextGrid[k][i][j].className = 'cell_' + cell.name;
+                } else {
+                    docNextGrid[k][i][j].className = 'cell';
                 }
             }
         }
@@ -295,6 +418,8 @@ function draw() {
     scoreText.innerHTML = "Score: " + score;
     linesText.innerHTML = "Lines: " + lines;
 }
+
+// ========================= MOVEMENT ============================
 
 function rotateRight() {
     fallingTetronimo.rotateRight();
@@ -332,6 +457,21 @@ function dropDown() {
     while (!tick()) {}
 }
 
+function holdPiece() {
+    fallingTetronimo.holdPiece();
+    draw();
+}
+
+// Used to both pause and unpause
+function pause() {
+    if (isPaused) {
+        tick()
+    } else {
+        clearInterval(tickInterval);
+    }
+    isPaused = !isPaused;
+}
+
 function checkTetronimo() { 
     // Check if falling Tetronimo is out of the screen or on top of other blocks
     // return 1 out of left screen, 2 if out of right, 3 if out of bottom screen, 4 if touching, 0 otherwise
@@ -359,8 +499,22 @@ function checkTetronimo() {
     return 0;
 }
 
+
+// ========================= KEY CONTROLLS ============================
+
 function keyPush(evt) {
     // Event triggered on key press
+    keyCode = evt.keyCode;
+    if (evt.keyCode == 82) { // R - restart
+        restart();
+    } else if (isGameOver) {
+        return;
+    } else if (evt.keyCode == 80) { // P - pause / unpause
+        pause();
+    } else if (isPaused) {
+        return;
+    }
+
     switch(evt.keyCode) {
         case 37: // LIJEVO
             moveLeft();
@@ -377,6 +531,10 @@ function keyPush(evt) {
         case 32: // SPACE
             dropDown();
             break;
+        case 67: // C   
+        case 72: // H
+            holdPiece();
+            break;
     }
 }
 
@@ -386,48 +544,3 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
 }
-
-function handleTouch(evt) {
-    rotateRight();
-}
-
-function getTouches(evt) {
-  return evt.touches ||             // browser API
-         evt.originalEvent.touches; // jQuery
-}                                                     
-                                                                         
-function handleTouchStart(evt) {
-    const firstTouch = getTouches(evt)[0];                                      
-    xDown = firstTouch.clientX;                                      
-    yDown = firstTouch.clientY;                                      
-};                                                
-                                                                         
-function handleTouchMove(evt) {
-    if ( ! xDown || ! yDown ) {
-        return;
-    }
-
-    var xUp = evt.touches[0].clientX;                                    
-    var yUp = evt.touches[0].clientY;
-
-    var xDiff = xDown - xUp;
-    var yDiff = yDown - yUp;
-                                                                         
-    if ( Math.abs( xDiff ) > Math.abs( yDiff ) ) {/*most significant*/
-        if ( xDiff > 0 ) {
-            moveRight();
-            /* right swipe */ 
-        } else {
-            moveLeft();
-            /* left swipe */
-        }
-    } else {
-        if ( yDiff > 0 ) {
-            dropDown();
-            /* down swipe */ 
-        }
-    }
-    /* reset values */
-    xDown = null;
-    yDown = null;                                             
-};
