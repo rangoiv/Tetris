@@ -29,4 +29,4 @@ Pause: P
 
 ## Screenshots
 
-<img src="./Images/screenshot_1.png" width="600"/>
+<img src="./screenshot_1.png" width="600"/>
