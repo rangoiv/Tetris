@@ -7,10 +7,17 @@ Created only using Html, css and Javascript. The implementation follows as much 
 ## How to play
 
 Left shift: ←
+
 Right shift: →
+
 Soft drop:↓
+
 Hard drop: space
+
 Rotate: ↑
+
 Hold piece: C
+
 Restart: R
+
 Pause: P
