@@ -6,6 +6,11 @@ Created only using Html, css and Javascript. The implementation follows as much 
 
 ## How to play
 
+Stack your pieces as long as you can and don't make them stack to the top of your screen!
+When you fill up the line, it empties out.
+
+### Controlls:
+
 Left shift: ←
 
 Right shift: →
@@ -21,3 +26,7 @@ Hold piece: C
 Restart: R
 
 Pause: P
+
+## Screenshots
+
+<img src="./Images/screenshot_1.png" width="600"/>
